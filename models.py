@@ -23,12 +23,13 @@ class Net(nn.Module):
         # maxpooling layers, multiple conv layers, fully-connected layers, and other layers (such as dropout or
         # batch normalization) to avoid overfitting
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
 
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool2 = nn.MaxPool2d(kernel_size=(4, 4), stride=4)
 
-        self.fc1 = nn.Linear(in_features=64 * 56 * 56, out_features=2048)
+        # self.fc1 = nn.Linear(in_features=64 * 56 * 56, out_features=2048)
+        self.fc1 = nn.Linear(in_features=64 * 28 * 28, out_features=2048)
         self.fc1_drop = nn.Dropout(p=.3)
         # We want to get 68 keypoints (each having x and y coordinate) => 136 out_features
         self.fc2 = nn.Linear(in_features=2048, out_features=136)

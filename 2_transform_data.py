@@ -10,6 +10,7 @@ from models import Net
 from data_load import FacialKeypointsDataset, Rescale, RandomCrop, Normalize, ToTensor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cpu")
 print(f"Using device {device}: {device}")
 neural_net = Net().to(device)
 print(neural_net)
@@ -21,8 +22,8 @@ transformed_dataset = FacialKeypointsDataset(csv_file='data/training_frames_keyp
                                              transform=data_transform)
 test_dataset = FacialKeypointsDataset(csv_file='data/test_frames_keypoints.csv', root_dir='data/test/',
                                       transform=data_transform)
-train_loader = DataLoader(transformed_dataset, batch_size=10, shuffle=True, num_workers=0)
-test_loader = DataLoader(test_dataset, batch_size=10, shuffle=True, num_workers=0)
+train_loader = DataLoader(transformed_dataset, batch_size=5, shuffle=True, num_workers=0)
+test_loader = DataLoader(test_dataset, batch_size=5, shuffle=True, num_workers=0)
 
 criterion = nn.SmoothL1Loss()
 optimizer = optim.Adam(neural_net.parameters())
@@ -37,7 +38,8 @@ def net_sample_output():
         key_pts = sample['keypoints']
 
         # convert images to FloatTensors
-        images = images.type(torch.FloatTensor)
+        # images = images.type(torch.cuda.FloatTensor)
+        images = images.float().to(device)
 
         # forward pass to get net output
         output_pts = neural_net(images)
@@ -110,8 +112,10 @@ def train_net(n_epochs: int) -> None:
             key_pts = key_pts.view(key_pts.size(0), -1)
 
             # convert variables to floats for regression loss
-            key_pts = key_pts.type(torch.FloatTensor)
-            images = images.type(torch.FloatTensor)
+            # key_pts = key_pts.type(torch.cuda.FloatTensor)
+            # images = images.type(torch.cuda.FloatTensor)
+            key_pts = key_pts.float().to(device)
+            images = images.float().to(device)
             # forward pass to get outputs
             output_pts = neural_net(images)
             # calculate the loss between predicted and target keypoints
@@ -124,15 +128,15 @@ def train_net(n_epochs: int) -> None:
             optimizer.step()
             # print loss statistics
             running_loss += loss.item()
+
             if batch_i % 10 == 9:  # print every 10 batches
                 print('Epoch: {}, Batch: {}, Avg. Loss: {}'.format(epoch + 1, batch_i + 1, running_loss / 10))
                 running_loss = 0.0
-
     print('Finished Training')
 
 
 if __name__ == '__main__':
-    train_net(1)
+    train_net(7)
     visualize_output(*net_sample_output())
 
     # after training, save your model parameters in the dir 'saved_models'
