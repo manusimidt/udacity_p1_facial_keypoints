@@ -12,8 +12,6 @@ class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
-
-        # TODO: Define all the layers of this CNN, the only requirements are:
         # 1. This network takes in a square (same width and height), grayscale image as input
         # 2. It ends with a linear layer that represents the keypoints
         # it's suggested that you make this last layer output 136 values, 2 for each of the 68 keypoint (x, y) pairs
@@ -32,10 +30,10 @@ class Net(nn.Module):
 
         self.fc1 = nn.Linear(in_features=64 * 56 * 56, out_features=2048)
         self.fc1_drop = nn.Dropout(p=.3)
+        # We want to get 68 keypoints (each having x and y coordinate) => 136 out_features
         self.fc2 = nn.Linear(in_features=2048, out_features=136)
 
     def forward(self, x):
-        # TODO: Define the feedforward behavior of this model
         # x is the input image and, as an example, here you may choose to include a pool/conv step:
         # input are 10 (batch_size) images with one color channel and with a resolution of 224x224
         # x: 10x1x224x224

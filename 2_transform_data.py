@@ -5,49 +5,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-
+import torch.optim as optim
 from models import Net
 from data_load import FacialKeypointsDataset, Rescale, RandomCrop, Normalize, ToTensor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device {device}: {device}")
-net = Net().to(device)
-print(net)
+neural_net = Net().to(device)
+print(neural_net)
 
-# Rescaling and/or cropping the data, such that you are left with a square image (the suggested size is 224x224px)
-# Normalizing the images and key-points; turning each RGB image into a grayscale image with a color range of [0, 1] and
-# transforming the given key-points into a range of [-1, 1]
-# Turning these images and key-points into Tensors
 data_transform = transforms.Compose([Rescale(300), RandomCrop(224), Normalize(), ToTensor()])
-
 # create the transformed dataset
 transformed_dataset = FacialKeypointsDataset(csv_file='data/training_frames_keypoints.csv',
                                              root_dir='data/training/',
                                              transform=data_transform)
-
-print('Number of images: ', len(transformed_dataset))
-
-# iterate through the transformed dataset and print some stats about the first few samples
-for i in range(4):
-    sample = transformed_dataset[i]
-    print(i, sample['image'].size(), sample['keypoints'].size())
-
-# load training data in batches
-batch_size = 10
-
-train_loader = DataLoader(transformed_dataset,
-                          batch_size=batch_size,
-                          shuffle=True,
-                          num_workers=4)
-
-test_dataset = FacialKeypointsDataset(csv_file='data/test_frames_keypoints.csv',
-                                      root_dir='data/test/',
+test_dataset = FacialKeypointsDataset(csv_file='data/test_frames_keypoints.csv', root_dir='data/test/',
                                       transform=data_transform)
+train_loader = DataLoader(transformed_dataset, batch_size=10, shuffle=True, num_workers=0)
+test_loader = DataLoader(test_dataset, batch_size=10, shuffle=True, num_workers=0)
 
-test_loader = DataLoader(test_dataset,
-                         batch_size=batch_size,
-                         shuffle=True,
-                         num_workers=0)
+criterion = nn.SmoothL1Loss()
+optimizer = optim.Adam(neural_net.parameters())
 
 
 def net_sample_output():
@@ -62,7 +40,7 @@ def net_sample_output():
         images = images.type(torch.FloatTensor)
 
         # forward pass to get net output
-        output_pts = net.forward(images)
+        output_pts = neural_net(images)
 
         # reshape to batch_size x 68 x 2 pts
         output_pts = output_pts.view(output_pts.size()[0], 68, -1)
@@ -71,15 +49,6 @@ def net_sample_output():
         if i == 0:
             return images, output_pts, key_pts
 
-
-# call the above function
-# returns: test images, test predicted keypoints, test ground truth keypoints
-test_images, test_outputs, gt_pts = net_sample_output()
-
-# print out the dimensions of the data to see if they make sense
-print(test_images.data.size())
-print(test_outputs.data.size())
-print(gt_pts.size())
 
 def show_all_keypoints(image, predicted_key_pts, gt_pts=None):
     """Show image with predicted keypoints"""
@@ -91,15 +60,13 @@ def show_all_keypoints(image, predicted_key_pts, gt_pts=None):
         plt.scatter(gt_pts[:, 0], gt_pts[:, 1], s=20, marker='.', c='g')
 
 
-# visualize the output
-# by default this shows a batch of 10 images
 def visualize_output(test_images, test_outputs, gt_pts=None, batch_size=10):
     for i in range(batch_size):
         plt.figure(figsize=(20, 10))
         ax = plt.subplot(1, batch_size, i + 1)
 
         # un-transform the image data
-        image = test_images[i].data  # get the image from it's wrapper
+        image = test_images[i].data  # get the image from it's Variable wrapper
         image = image.numpy()  # convert to numpy array from a Tensor
         image = np.transpose(image, (1, 2, 0))  # transpose to go from torch to numpy image
 
@@ -123,5 +90,50 @@ def visualize_output(test_images, test_outputs, gt_pts=None, batch_size=10):
     plt.show()
 
 
-# call it
-visualize_output(test_images, test_outputs, gt_pts)
+def train_net(n_epochs: int) -> None:
+    """
+    Trains the network
+    """
+    neural_net.train()
+
+    for epoch in range(n_epochs):  # loop over the dataset multiple times
+
+        running_loss = 0.0
+
+        # train on batches of data, assumes you already have train_loader
+        for batch_i, data in enumerate(train_loader):
+            # get the input images and their corresponding labels
+            images = data['image']
+            key_pts = data['keypoints']
+
+            # flatten pts
+            key_pts = key_pts.view(key_pts.size(0), -1)
+
+            # convert variables to floats for regression loss
+            key_pts = key_pts.type(torch.FloatTensor)
+            images = images.type(torch.FloatTensor)
+            # forward pass to get outputs
+            output_pts = neural_net(images)
+            # calculate the loss between predicted and target keypoints
+            loss = criterion(output_pts, key_pts)
+            # zero the parameter (weight) gradients
+            optimizer.zero_grad()
+            # backward pass to calculate the weight gradients
+            loss.backward()
+            # update the weights
+            optimizer.step()
+            # print loss statistics
+            running_loss += loss.item()
+            if batch_i % 10 == 9:  # print every 10 batches
+                print('Epoch: {}, Batch: {}, Avg. Loss: {}'.format(epoch + 1, batch_i + 1, running_loss / 10))
+                running_loss = 0.0
+
+    print('Finished Training')
+
+
+if __name__ == '__main__':
+    train_net(1)
+    visualize_output(*net_sample_output())
+
+    # after training, save your model parameters in the dir 'saved_models'
+    torch.save(neural_net.state_dict(), 'saved_models/' + 'model1')

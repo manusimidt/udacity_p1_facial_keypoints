@@ -1,14 +1,13 @@
 import glob
 import os
 import torch
-from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import matplotlib.image as mpimg
 import pandas as pd
 import cv2
 
 
-class FacialKeypointsDataset(Dataset):
+class FacialKeypointsDataset(torch.utils.data.Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self, csv_file, root_dir, transform=None):
@@ -31,17 +30,14 @@ class FacialKeypointsDataset(Dataset):
                                   self.key_pts_frame.iloc[idx, 0])
 
         image = mpimg.imread(image_name)
-
         # if image has an alpha color channel, get rid of it
-        if (image.shape[2] == 4):
-            image = image[:, :, 0:3]
+        if image.shape[2] == 4: image = image[:, :, 0:3]
 
         key_pts = self.key_pts_frame.iloc[idx, 1:].as_matrix()
         key_pts = key_pts.astype('float').reshape(-1, 2)
         sample = {'image': image, 'keypoints': key_pts}
 
-        if self.transform:
-            sample = self.transform(sample)
+        if self.transform: sample = self.transform(sample)
 
         return sample
 
