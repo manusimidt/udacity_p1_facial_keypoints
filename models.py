@@ -48,26 +48,26 @@ class Net(nn.Module):
         self.pool4 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
         # batch_size = 256 x 12 x 12
 
-        self.fc1 = nn.Linear(in_features=256 * 12 * 12, out_features=1028)
-        self.fc1_drop = nn.Dropout(p=.3)
+        self.fc1 = nn.Linear(in_features=256 * 12 * 12, out_features=512)
+        self.fc1_drop = nn.Dropout(p=.2)
         # We want to get 68 keypoints (each having x and y coordinate) => 136 out_features
-        self.fc2 = nn.Linear(in_features=1028, out_features=136)
+        self.fc2 = nn.Linear(in_features=512, out_features=136)
 
     def forward(self, x):
         # x is the input image and, as an example, here you may choose to include a pool/conv step:
         # input are 10 (batch_size) images with one color channel and with a resolution of 224x224
         # x: 10x1x224x224
-        x = F.relu(self.conv1(x))
-        x = self.pool1(self.bn1(x))
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.pool1(x)
 
-        x = F.relu(self.conv2(x))
-        x = self.pool2(self.bn2(x))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.pool2(x)
 
-        x = F.relu(self.conv3(x))
-        x = self.pool3(self.bn3(x))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = self.pool3(x)
 
-        x = F.relu(self.conv4(x))
-        x = self.pool4(self.bn4(x))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = self.pool4(x)
 
         x = x.view(x.size(0), -1)  # 10x200704
 

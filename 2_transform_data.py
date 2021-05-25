@@ -15,18 +15,18 @@ print(f"Using device {device}: {device}")
 neural_net = Net().to(device)
 print(neural_net)
 
-data_transform = transforms.Compose([Rescale(300), RandomCrop(224), Normalize(), ToTensor()])
+data_transform = transforms.Compose([Rescale(250), RandomCrop(224), Normalize(), ToTensor()])
 # create the transformed dataset
 transformed_dataset = FacialKeypointsDataset(csv_file='data/training_frames_keypoints.csv',
                                              root_dir='data/training/',
                                              transform=data_transform)
 test_dataset = FacialKeypointsDataset(csv_file='data/test_frames_keypoints.csv', root_dir='data/test/',
                                       transform=data_transform)
-train_loader = DataLoader(transformed_dataset, batch_size=10, shuffle=True, num_workers=4)
-test_loader = DataLoader(test_dataset, batch_size=10, shuffle=True, num_workers=4)
+train_loader = DataLoader(transformed_dataset, batch_size=25, shuffle=True, num_workers=4)
+test_loader = DataLoader(test_dataset, batch_size=25, shuffle=True, num_workers=4)
 
-criterion = nn.SmoothL1Loss()
-optimizer = optim.Adam(neural_net.parameters(), lr=0.001)
+criterion = nn.MSELoss()
+optimizer = optim.Adam(params=neural_net.parameters(), lr=0.001)
 
 
 def net_sample_output():
@@ -69,12 +69,12 @@ def visualize_output(test_images, test_outputs, gt_pts=None, batch_size=10):
 
         # un-transform the image data
         image = test_images[i].data  # get the image from it's Variable wrapper
-        image = image.numpy()  # convert to numpy array from a Tensor
+        image = image.cpu().numpy()  # convert to numpy array from a Tensor
         image = np.transpose(image, (1, 2, 0))  # transpose to go from torch to numpy image
 
         # un-transform the predicted key_pts data
         predicted_key_pts = test_outputs[i].data
-        predicted_key_pts = predicted_key_pts.numpy()
+        predicted_key_pts = predicted_key_pts.cpu().numpy()
         # undo normalization of keypoints
         predicted_key_pts = predicted_key_pts * 50.0 + 100
 
@@ -109,7 +109,7 @@ def train_net(n_epochs: int) -> None:
             key_pts = data['keypoints']
 
             # flatten pts
-            key_pts = key_pts.view(key_pts.size()[0], -1)
+            key_pts = key_pts.view(key_pts.size(0), -1)
 
             # convert variables to floats for regression loss
             # key_pts = key_pts.type(torch.cuda.FloatTensor)
@@ -138,7 +138,7 @@ def train_net(n_epochs: int) -> None:
 
 
 if __name__ == '__main__':
-    train_net(7)
+    train_net(10)
     visualize_output(*net_sample_output())
 
     # after training, save your model parameters in the dir 'saved_models'
