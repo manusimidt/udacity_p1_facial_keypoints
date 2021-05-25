@@ -24,13 +24,13 @@ class Net(nn.Module):
         # batch normalization) to avoid overfitting
 
         # data comes in as batch_size x 1 x 224 x 224
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3, 3), stride=(1, 1), padding=(0, 0))
         # batch_size x 32 x 224 x 224
         self.bn1 = nn.BatchNorm2d(32)
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
         # batch_size x 32 x 112 x 112
 
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(4, 4), stride=(1, 1), padding=(0, 0))
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=(0, 0))
         # batch_size x 64 x 109 x 109
         self.bn2 = nn.BatchNorm2d(64)
         self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
@@ -42,16 +42,16 @@ class Net(nn.Module):
         self.pool3 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
         # batch_size = 128 x 26 x 26
 
-        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(2, 2), stride=(1, 1), padding=(0, 0))
+        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3), stride=(1, 1), padding=(0, 0))
         # batch_size = 256 x 25 x 25
         self.bn4 = nn.BatchNorm2d(256)
         self.pool4 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
         # batch_size = 256 x 12 x 12
 
-        self.fc1 = nn.Linear(in_features=256 * 12 * 12, out_features=2048)
+        self.fc1 = nn.Linear(in_features=256 * 12 * 12, out_features=1028)
         self.fc1_drop = nn.Dropout(p=.3)
         # We want to get 68 keypoints (each having x and y coordinate) => 136 out_features
-        self.fc2 = nn.Linear(in_features=2048, out_features=136)
+        self.fc2 = nn.Linear(in_features=1028, out_features=136)
 
     def forward(self, x):
         # x is the input image and, as an example, here you may choose to include a pool/conv step:
