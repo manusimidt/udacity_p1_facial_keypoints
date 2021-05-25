@@ -10,7 +10,7 @@ from models import Net
 from data_load import FacialKeypointsDataset, Rescale, RandomCrop, Normalize, ToTensor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#device = torch.device("cpu")
+# device = torch.device("cpu")
 print(f"Using device {device}: {device}")
 neural_net = Net().to(device)
 print(neural_net)
@@ -22,11 +22,11 @@ transformed_dataset = FacialKeypointsDataset(csv_file='data/training_frames_keyp
                                              transform=data_transform)
 test_dataset = FacialKeypointsDataset(csv_file='data/test_frames_keypoints.csv', root_dir='data/test/',
                                       transform=data_transform)
-train_loader = DataLoader(transformed_dataset, batch_size=5, shuffle=True, num_workers=0)
-test_loader = DataLoader(test_dataset, batch_size=5, shuffle=True, num_workers=0)
+train_loader = DataLoader(transformed_dataset, batch_size=10, shuffle=True, num_workers=4)
+test_loader = DataLoader(test_dataset, batch_size=10, shuffle=True, num_workers=4)
 
 criterion = nn.SmoothL1Loss()
-optimizer = optim.Adam(neural_net.parameters())
+optimizer = optim.Adam(neural_net.parameters(), lr=0.001)
 
 
 def net_sample_output():
@@ -109,7 +109,7 @@ def train_net(n_epochs: int) -> None:
             key_pts = data['keypoints']
 
             # flatten pts
-            key_pts = key_pts.view(key_pts.size(0), -1)
+            key_pts = key_pts.view(key_pts.size()[0], -1)
 
             # convert variables to floats for regression loss
             # key_pts = key_pts.type(torch.cuda.FloatTensor)
@@ -117,7 +117,7 @@ def train_net(n_epochs: int) -> None:
             key_pts = key_pts.float().to(device)
             images = images.float().to(device)
             # forward pass to get outputs
-            output_pts = neural_net(images)
+            output_pts = neural_net.forward(images)
             # calculate the loss between predicted and target keypoints
             loss = criterion(output_pts, key_pts)
             # zero the parameter (weight) gradients
@@ -128,6 +128,8 @@ def train_net(n_epochs: int) -> None:
             optimizer.step()
             # print loss statistics
             running_loss += loss.item()
+
+            torch.cuda.empty_cache()
 
             if batch_i % 10 == 9:  # print every 10 batches
                 print('Epoch: {}, Batch: {}, Avg. Loss: {}'.format(epoch + 1, batch_i + 1, running_loss / 10))
