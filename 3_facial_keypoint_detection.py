@@ -21,17 +21,7 @@ faces = face_cascade.detectMultiScale(image, 1.2, 2)
 
 image_copy = np.copy(image)
 
-
-def show_all_keypoints(image, predicted_key_pts, gt_pts=None):
-    """Show image with predicted keypoints"""
-    # image is grayscale
-    plt.imshow(image, cmap='gray')
-    plt.scatter(predicted_key_pts[:, 0], predicted_key_pts[:, 1], s=20, marker='.', c='m')
-    # plot ground truth points as green pts
-    if gt_pts is not None:
-        plt.scatter(gt_pts[:, 0], gt_pts[:, 1], s=20, marker='.', c='g')
-
-
+net.eval()
 # loop over the detected faces from your haar cascade
 for (x, y, w, h) in faces:
     # Select the region of interest that is the face in the image
@@ -47,9 +37,15 @@ for (x, y, w, h) in faces:
     roi_gray = cv2.resize(roi_gray, (224, 224))
 
     # Reshape the numpy image shape (H x W x C) into a torch image shape (C x H x W)
-    roi_gray_t = np.expand_dims(roi_gray, axis=0)
-    roi_gray_t = np.expand_dims(roi_gray_t, axis=0)
-    roi_gray_t = torch.from_numpy(roi_gray_t).float()
-    predicted_points = net.forward(roi_gray_t)
-    predicted_points = (predicted_points * 50.0 + 100)
-    show_all_keypoints(roi, np.squeeze(predicted_points))
+    roi_gray_t = np.expand_dims(roi_gray, 0)
+    roi_gray_t = torch.from_numpy(np.expand_dims(roi_gray_t, 0)).float()
+
+    predicted_points = net.forward(roi_gray_t).data.view(68, -1).numpy()
+    # undo normalization of keypoints
+    predicted_points = (predicted_points * 100.0 + 90)
+
+    fig = plt.figure(figsize=(5, 5))
+    plot = fig.add_subplot(1, 1, 1)
+    plot.imshow(np.squeeze(roi_gray), cmap='gray')
+    plot.scatter(predicted_points[:, 0], predicted_points[:, 1], s=20, marker='.', c='m')
+    plt.show()
